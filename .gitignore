@@ -1,0 +1,8 @@
+.env
+credentials/
+.tmp/
+__pycache__/
+*.pyc
+*.pickle
+token_b64.txt
+google CLI/client_secret_*.json
