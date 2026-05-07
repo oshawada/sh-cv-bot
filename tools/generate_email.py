@@ -4,7 +4,7 @@
 # Outputs: dict {cv_path, cv_name, cv_filename, email_body, subject, confidence}
 
 import os
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 from pypdf import PdfReader
 from download_cvs import CV_FILES, get_all_cvs
@@ -17,7 +17,7 @@ _client = None
 def get_client():
     global _client
     if _client is None:
-        _client = genai.Client(api_key=os.getenv("GOOGLE_AI_API_KEY"))
+        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
 
@@ -54,47 +54,41 @@ def generate_email(job_info: dict, selected_cv_key: str = None) -> dict:
         cv, confidence = select_cv(job_info.get("requirements_summary", ""))
         cv = next(c for c in all_cvs if c["key"] == cv["key"])
 
-    cv_text = read_cv_text(cv["path"])
+    cv_text = read_cv_text(cv["path"])[:2500]
 
     job_title = job_info.get("job_title") or "the advertised position"
     company = job_info.get("company") or "your company"
-    requirements = job_info.get("requirements_summary") or ""
+    requirements = (job_info.get("requirements_summary") or "")[:500]
 
-    prompt = f"""You are a world-class executive career coach and persuasive copywriter who specializes in writing job application emails that make HR managers immediately pick up the phone to schedule an interview.
-
-Your goal: write an email body so compelling that the reader finishes it thinking "I need to meet this person TODAY."
+    prompt = f"""You are writing a job application email strictly based on the CV text provided. You must NOT add, infer, or invent any information that is not explicitly written in the CV.
 
 JOB DETAILS:
 - Position: {job_title}
 - Company: {company}
 - Key requirements: {requirements}
 
-OMAR'S ACTUAL CV CONTENT (use SPECIFIC details, numbers, and achievements — never be vague):
+CV TEXT (copy skills, tools, roles, and experience only from here — nothing else):
 {cv_text}
 
-WRITING RULES (follow every single one):
-1. OPEN with a bold, confident hook that immediately signals value — NOT "I am writing to express my interest." Start with what Omar DELIVERS.
-2. Connect Omar's SPECIFIC achievements directly to the company's pain points. Name exact tools, systems, results from the CV.
-3. Create a "this person is rare" feeling — highlight 2 unique things Omar has done that most candidates cannot claim.
-4. Keep it tight: 3 short paragraphs, ~160 words total. Every sentence must earn its place. No filler.
-5. End with a confident, natural call to action.
-6. Tone: confident, direct, warm. High-performer who knows their value.
-7. Write in FIRST PERSON (I, my, me). Never use "he/Omar/third person".
-8. Write in English. NO greeting line, NO subject line.
+RULES:
+1. Every sentence must be directly traceable to a specific line in the CV text above. If it is not in the CV, do not write it.
+2. No invented achievements, no made-up metrics, no percentages, no numbers unless they are copied word-for-word from the CV.
+3. Do not use phrases like "proven track record", "strong background", or any vague filler not backed by the CV.
+4. Match CV content to the job requirements — select the most relevant parts only.
+5. Length: 2 short paragraphs, ~60 words. No greeting. No subject line.
+6. End with one call-to-action sentence.
+7. First person (I, my, me). Professional tone.
 
-FORMATTING:
-- Wrap important keywords, tools, achievements, and numbers in <b> tags.
-- Examples of what to bold: tool names, system names, metrics, key skills matching the job.
-- Return the email as HTML paragraphs using <p> tags with <b> for bold words.
-- NO other HTML tags. Just <p> and <b>."""
+FORMATTING: HTML only. Use <p> for paragraphs, <b> for key tools/skills. Nothing else."""
 
-    response = get_client().models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
+    response = get_client().chat.completions.create(
+        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
     )
 
     import re
-    raw = response.text.strip()
+    raw = response.choices[0].message.content.strip()
     raw = re.sub(r"^```(?:html)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
     # Convert markdown **bold** → <b> with inline style (Gmail strips <style> tags)

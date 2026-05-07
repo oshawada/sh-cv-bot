@@ -6,8 +6,8 @@
 import os
 import json
 import re
-from google import genai
-from google.genai import types
+import base64
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +18,7 @@ _client = None
 def get_client():
     global _client
     if _client is None:
-        _client = genai.Client(api_key=os.getenv("GOOGLE_AI_API_KEY"))
+        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
 
@@ -36,14 +36,20 @@ Extract the following information and return ONLY valid JSON (no markdown, no ex
 If no email address is visible in the image, set email to null.
 If you cannot determine a field, set it to null."""
 
-    image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-    response = get_client().models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[prompt, image_part],
+    response = get_client().chat.completions.create(
+        model=os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"),
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+            ],
+        }],
     )
 
-    text = response.text.strip()
+    text = response.choices[0].message.content.strip()
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
 

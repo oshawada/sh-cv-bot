@@ -8,8 +8,12 @@ services:
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: GOOGLE_AI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_VISION_MODEL
+        value: llama-3.2-11b-vision-preview
       - key: GMAIL_SENDER
         sync: false
       - key: GOOGLE_OAUTH_TOKEN_B64
