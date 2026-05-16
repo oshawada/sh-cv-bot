@@ -64,32 +64,35 @@ def generate_email(job_info: dict, selected_cv_key: str = None) -> dict:
         cv, confidence = select_cv(job_info.get("requirements_summary", ""))
         cv = next(c for c in all_cvs if c["key"] == cv["key"])
 
-    cv_text = read_cv_text(cv["path"])[:2500]
+    cv_text = read_cv_text(cv["path"])[:3500]
 
     job_title = job_info.get("job_title") or "the advertised position"
     company = job_info.get("company") or "your company"
-    requirements = (job_info.get("requirements_summary") or "")[:500]
+    requirements = (job_info.get("requirements_summary") or "")[:800]
 
-    prompt = f"""You are writing a job application email strictly based on the CV text provided. You must NOT add, infer, or invent any information that is not explicitly written in the CV.
+    prompt = f"""You are writing a tailored job application email. Your job is to READ the requirements carefully, then SEARCH the CV for the most relevant matching experience, skills, and tools — and highlight only those.
 
-JOB DETAILS:
-- Position: {job_title}
-- Company: {company}
-- Key requirements: {requirements}
+===== TARGET JOB =====
+Position: {job_title}
+Company: {company}
+Requirements: {requirements}
 
-CV TEXT (copy skills, tools, roles, and experience only from here — nothing else):
+===== MY CV =====
 {cv_text}
 
-RULES:
-1. Every sentence must be directly traceable to a specific line in the CV text above. If it is not in the CV, do not write it.
-2. No invented achievements, no made-up metrics, no percentages, no numbers unless they are copied word-for-word from the CV.
-3. Do not use phrases like "proven track record", "strong background", or any vague filler not backed by the CV.
-4. Match CV content to the job requirements — select the most relevant parts only.
-5. Length: 2 short paragraphs, ~60 words. No greeting. No subject line.
-6. End with one call-to-action sentence.
-7. First person (I, my, me). Professional tone.
+===== YOUR TASK =====
+Step 1 — Identify the 3-4 most relevant keywords/skills from the requirements.
+Step 2 — Find where those exact skills or experiences appear in the CV text above.
+Step 3 — Write 2 short paragraphs (~70 words total) that connect those CV facts directly to this specific job.
 
-FORMATTING: HTML only. Use <p> for paragraphs, <b> for key tools/skills. Nothing else."""
+STRICT RULES:
+- Every claim must come word-for-word or paraphrased from the CV text. No invented facts.
+- Do NOT use the same opening sentence for every job — vary it based on what this role needs.
+- Bold (<b>) the 2-3 skills most relevant to THIS specific job's requirements.
+- No greeting line. No subject line. End with one call-to-action sentence.
+- First person. Professional tone.
+
+OUTPUT: HTML only — <p> tags for paragraphs, <b> for bolded skills. Nothing else."""
 
     response = get_client().models.generate_content(
         model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
