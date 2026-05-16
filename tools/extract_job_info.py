@@ -10,6 +10,10 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
+_FAST_CONFIG = types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(thinking_budget=0)
+)
+
 load_dotenv()
 
 _client = None
@@ -42,6 +46,7 @@ If you cannot determine a field, set it to null."""
             types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
             prompt,
         ],
+        config=_FAST_CONFIG,
     )
 
     text = response.text.strip()

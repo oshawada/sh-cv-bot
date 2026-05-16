@@ -5,6 +5,7 @@
 
 import os
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from pypdf import PdfReader
 from download_cvs import CV_FILES, get_all_cvs
@@ -12,6 +13,11 @@ from download_cvs import CV_FILES, get_all_cvs
 load_dotenv()
 
 _client = None
+_cv_text_cache: dict = {}
+
+_FAST_CONFIG = types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(thinking_budget=0)
+)
 
 
 def get_client():
@@ -22,8 +28,12 @@ def get_client():
 
 
 def read_cv_text(cv_path: str) -> str:
-    reader = PdfReader(cv_path)
-    return "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+    if cv_path not in _cv_text_cache:
+        reader = PdfReader(cv_path)
+        _cv_text_cache[cv_path] = "\n".join(
+            page.extract_text() or "" for page in reader.pages
+        ).strip()
+    return _cv_text_cache[cv_path]
 
 
 def select_cv(requirements_summary: str) -> tuple[dict, int]:
@@ -84,6 +94,7 @@ FORMATTING: HTML only. Use <p> for paragraphs, <b> for key tools/skills. Nothing
     response = get_client().models.generate_content(
         model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         contents=prompt,
+        config=_FAST_CONFIG,
     )
 
     import re
