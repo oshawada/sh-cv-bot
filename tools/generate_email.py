@@ -4,7 +4,7 @@
 # Outputs: dict {cv_path, cv_name, cv_filename, email_body, subject, confidence}
 
 import os
-from groq import Groq
+from google import genai
 from dotenv import load_dotenv
 from pypdf import PdfReader
 from download_cvs import CV_FILES, get_all_cvs
@@ -17,7 +17,7 @@ _client = None
 def get_client():
     global _client
     if _client is None:
-        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     return _client
 
 
@@ -81,14 +81,13 @@ RULES:
 
 FORMATTING: HTML only. Use <p> for paragraphs, <b> for key tools/skills. Nothing else."""
 
-    response = get_client().chat.completions.create(
-        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
+    response = get_client().models.generate_content(
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        contents=prompt,
     )
 
     import re
-    raw = response.choices[0].message.content.strip()
+    raw = response.text.strip()
     raw = re.sub(r"^```(?:html)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
     # Convert markdown **bold** → <b> with inline style (Gmail strips <style> tags)
