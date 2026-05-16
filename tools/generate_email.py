@@ -150,7 +150,7 @@ def build_html_email(body_html: str, job_title: str, company: str) -> str:
           </div>
         </td>
         <td align="right" valign="top">
-          <a href="https://linkedin.com/in/omar-shawada"
+          <a href="https://www.linkedin.com/in/omarshawada"
              style="display: inline-block; background: rgba(255,255,255,0.15); color: #ffffff;
                     font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px;
                     text-decoration: none; border: 1px solid rgba(255,255,255,0.3);">
